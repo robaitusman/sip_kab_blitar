@@ -32,6 +32,7 @@ class Kernel extends HttpKernel
     protected $middlewareGroups = [
         'web' => [
             \App\Http\Middleware\SetLocale::class,
+            \App\Http\Middleware\ForceHttpsMiddleware::class,
             \App\Http\Middleware\EncryptCookies::class,
             \Illuminate\Cookie\Middleware\AddQueuedCookiesToResponse::class,
             \Illuminate\View\Middleware\ShareErrorsFromSession::class,
@@ -70,5 +71,6 @@ class Kernel extends HttpKernel
         'accountstatus' => \App\Http\Middleware\AccountStatus::class,
         'otpverification' => \App\Http\Middleware\OtpVerification::class,
         'session.security' => \App\Http\Middleware\EnforceSessionSecurity::class,
+        'force.https' => \App\Http\Middleware\ForceHttpsMiddleware::class,
     ];
 }

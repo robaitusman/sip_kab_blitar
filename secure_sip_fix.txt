@@ -48,9 +48,9 @@ Catatan: bisa diintegrasikan ke SIEM/Wazuh jika tersedia.
 
 Tahap 6 - Keamanan Komunikasi & Header
 Tujuan: enforce HTTPS dan header proteksi.
-Perubahan yang perlu dibuat:
-- Middleware `ForceHttpsMiddleware`: redirect ke HTTPS di production dan tambahkan header HSTS, X-Frame-Options DENY, X-Content-Type-Options nosniff, Referrer-Policy strict-origin-when-cross-origin, Permissions-Policy minimal.
-- Kernel: daftarkan middleware untuk semua web responses.
+Perubahan yang sudah dibuat:
+- Middleware `app/Http/Middleware/ForceHttpsMiddleware.php`: di production redirect ke HTTPS, dan set header HSTS, X-Frame-Options DENY, X-Content-Type-Options nosniff, Referrer-Policy strict-origin-when-cross-origin, Permissions-Policy minimal.
+- Kernel: middleware ForceHttpsMiddleware ditambahkan ke grup `web` dan alias `force.https`.
 Catatan infra: aktifkan TLS valid di server; disable script execution & directory listing di folder upload.
 
 Tahap 7 - Integritas File & Anti-Tamper
