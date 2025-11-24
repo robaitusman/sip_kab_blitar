@@ -11,7 +11,7 @@ return new class extends Migration
         if (!Schema::hasTable('password_histories')) {
             Schema::create('password_histories', function (Blueprint $table) {
                 $table->id();
-                $table->unsignedBigInteger('user_id');
+                $table->unsignedInteger('user_id');
                 $table->string('password_hash');
                 $table->timestamps();
 
