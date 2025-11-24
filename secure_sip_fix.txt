@@ -55,11 +55,11 @@ Catatan infra: aktifkan TLS valid di server; disable script execution & director
 
 Tahap 7 - Integritas File & Anti-Tamper
 Tujuan: deteksi perubahan file pasca upload.
-Perubahan yang perlu dibuat:
-- Migrasi: tabel `file_integrity_records` (path, sha256_hash, last_scanned_at, timestamps).
-- Model `FileIntegrityRecord`.
-- FileUploaderController: setelah upload sukses, hitung hash SHA256 dan simpan/update record.
-Catatan: butuh scheduler artisan + cron untuk verifikasi berkala (Outstanding).
+Perubahan yang sudah dibuat:
+- Migrasi: `database/migrations/2025_11_21_103852_create_file_integrity_records_table.php` untuk tabel `file_integrity_records`.
+- Model: `app/Models/FileIntegrityRecord.php`.
+- `app/Http/Controllers/FileUploaderController.php`: setelah upload/s3upload sukses, hitung hash SHA256 setiap file dan simpan/update ke tabel integritas dengan timestamp terakhir. Logging keamanan tetap berjalan.
+Catatan: masih perlu scheduler artisan + cron untuk verifikasi berkala dan alert bila hash berubah (Outstanding).
 
 Tahap 8 - Proteksi API & Web Service
 Tujuan: API internal dengan token, rate limit, schema validation, anti otomatisasi.

@@ -3,9 +3,11 @@ namespace App\Http\Controllers;
 
 use App\Helpers\Uploader;
 use App\Http\Controllers\Controller;
+use App\Models\FileIntegrityRecord;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Hash;
 class FileUploaderController extends Controller
 {
 	/**
@@ -29,6 +31,7 @@ class FileUploaderController extends Controller
 			$this->logSecurity($request, $fieldName, 'upload_failed_security', $uploader->errors);
 			return $this->reject($uploader->errors, 400);
 		}
+		$this->storeIntegrityHashes($uploader->uploadedFiles);
 		$this->logSecurity($request, $fieldName, 'upload_success', $uploader->uploadedFiles);
 		return $uploader->uploadedFiles;
 	}
@@ -53,6 +56,7 @@ class FileUploaderController extends Controller
 			$this->logSecurity($request, $fieldName, 's3upload_failed_security', $uploader->errors);
 			return $this->reject($uploader->errors, 400);
 		}
+		$this->storeIntegrityHashes($uploader->uploadedFiles);
 		$this->logSecurity($request, $fieldName, 's3upload_success', $uploader->uploadedFiles);
 		return $uploader->uploadedFiles;
 	}
@@ -93,5 +97,23 @@ class FileUploaderController extends Controller
 			'user_agent' => $request->header('User-Agent'),
 			'files' => $details,
 		]);
+	}
+
+	/**
+	 * Simpan hash SHA256 untuk file yang diupload ke tabel file_integrity_records
+	 */
+	private function storeIntegrityHashes(array $files): void
+	{
+		foreach ($files as $file) {
+			$path = public_path($file);
+			if (!File::exists($path)) {
+				continue;
+			}
+			$hash = hash_file('sha256', $path);
+			FileIntegrityRecord::updateOrCreate(
+				['path' => $file],
+				['sha256_hash' => $hash, 'last_scanned_at' => now()]
+			);
+		}
 	}
 }
