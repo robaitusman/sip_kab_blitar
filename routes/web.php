@@ -160,149 +160,151 @@ Route::middleware(['auth', 'rbac', 'session.security'])->group(function () {
 
 
 	
-Route::get('componentsdata/role_id_option_list',  function(Request $request){
-		$compModel = new App\Models\ComponentsData();
-		return $compModel->role_id_option_list($request);
-	}
-)->middleware(['auth']);
-	
-Route::get('componentsdata/users_username_value_exist',  function(Request $request){
-		$compModel = new App\Models\ComponentsData();
-		return $compModel->users_username_value_exist($request);
-	}
-);
-	
-Route::get('componentsdata/users_email_value_exist',  function(Request $request){
-		$compModel = new App\Models\ComponentsData();
-		return $compModel->users_email_value_exist($request);
-	}
-);
-	
-Route::get('componentsdata/id_kecamatan_option_list',  function(Request $request){
-		$compModel = new App\Models\ComponentsData();
-		return $compModel->id_kecamatan_option_list($request);
-	}
-);
-	
-Route::get('componentsdata/tahun_option_list',  function(Request $request){
-		$compModel = new App\Models\ComponentsData();
-		return $compModel->tahun_option_list($request);
-	}
-)->middleware(['auth']);
-	
-Route::get('componentsdata/barchart_gkppetani',  function(Request $request){
-		$compModel = new App\Models\ComponentsData();
-		return $compModel->barchart_gkppetani($request);
-	}
-)->middleware(['auth']);
-	
-Route::get('componentsdata/barchart_gkgpenggilingan',  function(Request $request){
-		$compModel = new App\Models\ComponentsData();
-		return $compModel->barchart_gkgpenggilingan($request);
-	}
-)->middleware(['auth']);
-	
-Route::get('componentsdata/barchart_beraspremium',  function(Request $request){
-		$compModel = new App\Models\ComponentsData();
-		return $compModel->barchart_beraspremium($request);
-	}
-)->middleware(['auth']);
-	
-Route::get('componentsdata/barchart_berasmedium',  function(Request $request){
-		$compModel = new App\Models\ComponentsData();
-		return $compModel->barchart_berasmedium($request);
-	}
-)->middleware(['auth']);
-	
-Route::get('componentsdata/barchart_jagungpipilankering',  function(Request $request){
-		$compModel = new App\Models\ComponentsData();
-		return $compModel->barchart_jagungpipilankering($request);
-	}
-)->middleware(['auth']);
-	
-Route::get('componentsdata/barchart_ubikayu',  function(Request $request){
-		$compModel = new App\Models\ComponentsData();
-		return $compModel->barchart_ubikayu($request);
-	}
-)->middleware(['auth']);
-	
-Route::get('componentsdata/barchart_ubijalar',  function(Request $request){
-		$compModel = new App\Models\ComponentsData();
-		return $compModel->barchart_ubijalar($request);
-	}
-)->middleware(['auth']);
-	
-Route::get('componentsdata/barchart_kedelailokalkering',  function(Request $request){
-		$compModel = new App\Models\ComponentsData();
-		return $compModel->barchart_kedelailokalkering($request);
-	}
-)->middleware(['auth']);
-	
-Route::get('componentsdata/barchart_cabebesar',  function(Request $request){
-		$compModel = new App\Models\ComponentsData();
-		return $compModel->barchart_cabebesar($request);
-	}
-)->middleware(['auth']);
-	
-Route::get('componentsdata/barchart_caberawitmerah',  function(Request $request){
-		$compModel = new App\Models\ComponentsData();
-		return $compModel->barchart_caberawitmerah($request);
-	}
-)->middleware(['auth']);
-	
-Route::get('componentsdata/barchart_cabekeriting',  function(Request $request){
-		$compModel = new App\Models\ComponentsData();
-		return $compModel->barchart_cabekeriting($request);
-	}
-)->middleware(['auth']);
-	
-Route::get('componentsdata/barchart_bawangmerah',  function(Request $request){
-		$compModel = new App\Models\ComponentsData();
-		return $compModel->barchart_bawangmerah($request);
-	}
-)->middleware(['auth']);
-	
-Route::get('componentsdata/barchart_dagingayam',  function(Request $request){
-		$compModel = new App\Models\ComponentsData();
-		return $compModel->barchart_dagingayam($request);
-	}
-)->middleware(['auth']);
-	
-Route::get('componentsdata/barchart_dagingsapi',  function(Request $request){
-		$compModel = new App\Models\ComponentsData();
-		return $compModel->barchart_dagingsapi($request);
-	}
-)->middleware(['auth']);
-	
-Route::get('componentsdata/barchart_telurayamras',  function(Request $request){
-		$compModel = new App\Models\ComponentsData();
-		return $compModel->barchart_telurayamras($request);
-	}
-)->middleware(['auth']);
-	
-Route::get('componentsdata/barchart_pisang',  function(Request $request){
-		$compModel = new App\Models\ComponentsData();
-		return $compModel->barchart_pisang($request);
-	}
-)->middleware(['auth']);
-	
-Route::get('componentsdata/barchart_jeruk',  function(Request $request){
-		$compModel = new App\Models\ComponentsData();
-		return $compModel->barchart_jeruk($request);
-	}
-)->middleware(['auth']);
-	
-Route::get('componentsdata/getcount_hargaprodusen',  function(Request $request){
-		$compModel = new App\Models\ComponentsData();
-		return $compModel->getcount_hargaprodusen($request);
-	}
-)->middleware(['auth']);
-	
-Route::get('componentsdata/getcount_publikasipangan',  function(Request $request){
-		$compModel = new App\Models\ComponentsData();
-		return $compModel->getcount_publikasipangan($request);
-	}
-)->middleware(['auth']);
+Route::middleware(['auth', 'rbac'])->group(function () {
+	Route::get('componentsdata/role_id_option_list',  function(Request $request){
+			$compModel = new App\Models\ComponentsData();
+			return $compModel->role_id_option_list($request);
+		}
+	);
+		
+	Route::get('componentsdata/users_username_value_exist',  function(Request $request){
+			$compModel = new App\Models\ComponentsData();
+			return $compModel->users_username_value_exist($request);
+		}
+	);
+		
+	Route::get('componentsdata/users_email_value_exist',  function(Request $request){
+			$compModel = new App\Models\ComponentsData();
+			return $compModel->users_email_value_exist($request);
+		}
+	);
+		
+	Route::get('componentsdata/id_kecamatan_option_list',  function(Request $request){
+			$compModel = new App\Models\ComponentsData();
+			return $compModel->id_kecamatan_option_list($request);
+		}
+	);
+		
+	Route::get('componentsdata/tahun_option_list',  function(Request $request){
+			$compModel = new App\Models\ComponentsData();
+			return $compModel->tahun_option_list($request);
+		}
+	);
+		
+	Route::get('componentsdata/barchart_gkppetani',  function(Request $request){
+			$compModel = new App\Models\ComponentsData();
+			return $compModel->barchart_gkppetani($request);
+		}
+	);
+		
+	Route::get('componentsdata/barchart_gkgpenggilingan',  function(Request $request){
+			$compModel = new App\Models\ComponentsData();
+			return $compModel->barchart_gkgpenggilingan($request);
+		}
+	);
+		
+	Route::get('componentsdata/barchart_beraspremium',  function(Request $request){
+			$compModel = new App\Models\ComponentsData();
+			return $compModel->barchart_beraspremium($request);
+		}
+	);
+		
+	Route::get('componentsdata/barchart_berasmedium',  function(Request $request){
+			$compModel = new App\Models\ComponentsData();
+			return $compModel->barchart_berasmedium($request);
+		}
+	);
+		
+	Route::get('componentsdata/barchart_jagungpipilankering',  function(Request $request){
+			$compModel = new App\Models\ComponentsData();
+			return $compModel->barchart_jagungpipilankering($request);
+		}
+	);
+		
+	Route::get('componentsdata/barchart_ubikayu',  function(Request $request){
+			$compModel = new App\Models\ComponentsData();
+			return $compModel->barchart_ubikayu($request);
+		}
+	);
+		
+	Route::get('componentsdata/barchart_ubijalar',  function(Request $request){
+			$compModel = new App\Models\ComponentsData();
+			return $compModel->barchart_ubijalar($request);
+		}
+	);
+		
+	Route::get('componentsdata/barchart_kedelailokalkering',  function(Request $request){
+			$compModel = new App\Models\ComponentsData();
+			return $compModel->barchart_kedelailokalkering($request);
+		}
+	);
+		
+	Route::get('componentsdata/barchart_cabebesar',  function(Request $request){
+			$compModel = new App\Models\ComponentsData();
+			return $compModel->barchart_cabebesar($request);
+		}
+	);
+		
+	Route::get('componentsdata/barchart_caberawitmerah',  function(Request $request){
+			$compModel = new App\Models\ComponentsData();
+			return $compModel->barchart_caberawitmerah($request);
+		}
+	);
+		
+	Route::get('componentsdata/barchart_cabekeriting',  function(Request $request){
+			$compModel = new App\Models\ComponentsData();
+			return $compModel->barchart_cabekeriting($request);
+		}
+	);
+		
+	Route::get('componentsdata/barchart_bawangmerah',  function(Request $request){
+			$compModel = new App\Models\ComponentsData();
+			return $compModel->barchart_bawangmerah($request);
+		}
+	);
+		
+	Route::get('componentsdata/barchart_dagingayam',  function(Request $request){
+			$compModel = new App\Models\ComponentsData();
+			return $compModel->barchart_dagingayam($request);
+		}
+	);
+		
+	Route::get('componentsdata/barchart_dagingsapi',  function(Request $request){
+			$compModel = new App\Models\ComponentsData();
+			return $compModel->barchart_dagingsapi($request);
+		}
+	);
+		
+	Route::get('componentsdata/barchart_telurayamras',  function(Request $request){
+			$compModel = new App\Models\ComponentsData();
+			return $compModel->barchart_telurayamras($request);
+		}
+	);
+		
+	Route::get('componentsdata/barchart_pisang',  function(Request $request){
+			$compModel = new App\Models\ComponentsData();
+			return $compModel->barchart_pisang($request);
+		}
+	);
+		
+	Route::get('componentsdata/barchart_jeruk',  function(Request $request){
+			$compModel = new App\Models\ComponentsData();
+			return $compModel->barchart_jeruk($request);
+		}
+	);
+		
+	Route::get('componentsdata/getcount_hargaprodusen',  function(Request $request){
+			$compModel = new App\Models\ComponentsData();
+			return $compModel->getcount_hargaprodusen($request);
+		}
+	);
+		
+	Route::get('componentsdata/getcount_publikasipangan',  function(Request $request){
+			$compModel = new App\Models\ComponentsData();
+			return $compModel->getcount_publikasipangan($request);
+		}
+	);
+});
 
 
 Route::post('fileuploader/upload/{fieldname}', 'FileUploaderController@upload');

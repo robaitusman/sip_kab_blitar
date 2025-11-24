@@ -33,11 +33,11 @@ Catatan: folder `uploads/temp` tetap karantina; disarankan AV scan sebelum pinda
 
 Tahap 4 - Kontrol Akses & Auditing
 Tujuan: RBAC diterapkan ke seluruh route sensitif dan audit perubahan akun.
-Perubahan yang perlu dibuat:
-- Routes `routes/web.php`: pastikan semua endpoint internal (misal rekomendasi/componentsdata) dilindungi middleware RBAC/role.
-- AuthController: setelah login, batasi riwayat password ke 5 entri terbaru dan reset counter gagal.
-- Model User: pastikan casting timestamp baru berfungsi untuk evaluasi akses.
-Catatan: siapkan alert untuk akses mencurigakan (belum dikerjakan).
+Perubahan yang sudah dibuat:
+- Routes `routes/web.php`: seluruh endpoint `componentsdata/*` kini memakai middleware `auth` + `rbac` (sebelumnya sebagian tanpa rbac).
+- AuthController: lockout/reset counter/expiry sudah berjalan (riwayat dipangkas lewat service saat perubahan password).
+- Model User: casts timestamp keamanan sudah ada untuk evaluasi akses.
+Catatan: alert akses mencurigakan masih outstanding.
 
 Tahap 5 - Monitoring & Logging Upload
 Tujuan: audit trail upload/download untuk forensik.
