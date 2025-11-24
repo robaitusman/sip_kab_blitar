@@ -41,9 +41,9 @@ Catatan: alert akses mencurigakan masih outstanding.
 
 Tahap 5 - Monitoring & Logging Upload
 Tujuan: audit trail upload/download untuk forensik.
-Perubahan yang perlu dibuat:
-- `config/logging.php`: tambah channel `security` → file `storage/logs/security.log`.
-- `app/Http/Controllers/FileUploaderController.php`: log setiap upload/delete (sukses/gagal) beserta user, IP, user-agent, nama file, alasan gagal ke channel `security`.
+Perubahan yang sudah dibuat:
+- `config/logging.php`: channel `security` ditambahkan, masuk stack, output ke `storage/logs/security.log`.
+- `app/Http/Controllers/FileUploaderController.php`: semua upload/s3upload/remove_temp dilog ke channel security (action, field, user/id, IP, user-agent, file list/alasan gagal). Validasi/cek keamanan yang gagal menghasilkan log dan HTTP 400.
 Catatan: bisa diintegrasikan ke SIEM/Wazuh jika tersedia.
 
 Tahap 6 - Keamanan Komunikasi & Header
