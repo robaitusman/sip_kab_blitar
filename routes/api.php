@@ -2,6 +2,7 @@
 
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
+use Illuminate\Support\Facades\Cache;
 
 /*
 |--------------------------------------------------------------------------
@@ -14,6 +15,15 @@ use Illuminate\Support\Facades\Route;
 |
 */
 
-Route::middleware('auth:sanctum')->get('/user', function (Request $request) {
-    return $request->user();
+Route::middleware('throttle:30,1')->group(function () {
+    Route::middleware('api.token')->group(function () {
+        Route::get('/metrics', function (Request $request) {
+            return Cache::remember('api_metrics', 60, function () {
+                return [
+                    'status' => 'ok',
+                    'timestamp' => now()->toDateTimeString(),
+                ];
+            });
+        });
+    });
 });

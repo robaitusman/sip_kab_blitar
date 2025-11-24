@@ -72,5 +72,6 @@ class Kernel extends HttpKernel
         'otpverification' => \App\Http\Middleware\OtpVerification::class,
         'session.security' => \App\Http\Middleware\EnforceSessionSecurity::class,
         'force.https' => \App\Http\Middleware\ForceHttpsMiddleware::class,
+        'api.token' => \App\Http\Middleware\ValidateInternalApiToken::class,
     ];
 }
