@@ -23,6 +23,9 @@ class FileUploaderController extends Controller
 		}
 
 		$uploader->upload($request);
+		if (!empty($uploader->errors)) {
+			return $this->reject($uploader->errors, 400);
+		}
 		return $uploader->uploadedFiles;
 	}
 

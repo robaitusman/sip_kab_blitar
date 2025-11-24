@@ -4,31 +4,32 @@ Format: tiap tahap memuat tujuan, daftar perubahan yang perlu dibuat di kode SIP
 
 Tahap 1 - Penguatan Autentikasi (password policy & lockout)
 Tujuan: memenuhi kebijakan panjang/kompleksitas, pelacakan percobaan gagal, penguncian akun, masa berlaku 6 bulan, dan riwayat password.
-Perubahan yang perlu dibuat:
-- Migrasi: tambahkan kolom `password_changed_at`, `failed_login_attempts`, `lockout_until` di tabel users. Buat tabel `password_histories` (user_id, password_hash, created_at).
-- Model: buat `app/Models/PasswordHistory.php`; di model User tambahkan casts datetime untuk kolom baru dan relasi `passwordHistories()`.
-- Rule: buat `app/Rules/StrongPassword.php` (min 12, upper/lower/number/symbol, larang karakter berulang).
-- Service: buat `app/Services/PasswordSecurityService.php` untuk cek riwayat, enforce usia 6 bulan, simpan histori, reset counter gagal.
-- Request: pakai StrongPassword di form registrasi/penambahan user (misal `UsersRegisterRequest`, `UsersAddRequest`).
-- Controller: di `AuthController` terapkan limit 3 gagal → set lockout, cek expiry password 6 bulan, regenerasi hash historis saat reset; di `UsersController` catat histori password saat create/update.
-Catatan: reset paksa jika password kedaluwarsa; buat seeder admin dengan password patuh aturan.
+Perubahan yang sudah dibuat:
+- Migrasi: `database/migrations/2025_11_21_044158_add_password_metadata_to_users_table.php` (password_changed_at, failed_login_attempts, lockout_until) dan `2025_11_21_044211_create_password_histories_table.php` (riwayat hash).
+- Model: `app/Models/PasswordHistory.php` dan relasi/casts baru di `app/Models/Users.php`.
+- Rule: `app/Rules/StrongPassword.php` (min 12, upper/lower/number/symbol, larang 3 char berulang).
+- Service: `app/Services/PasswordSecurityService.php` (cek riwayat, expiry 6 bulan, lockout 3x gagal, reset counter, trimming riwayat 5).
+- Request: StrongPassword dipakai di `UsersAddRequest`, `UsersRegisterRequest`, `UsersEditRequest`.
+- Controller: `AuthController` (lockout, regen session, cek expiry, cegah reuse di reset, catat histori di register); `UsersController` (create/update catat histori); `AccountController` (ganti password cek reuse + catat histori).
+Catatan: jalankan `php artisan migrate` setelah deploy; paksa reset jika kadaluarsa.
 
 Tahap 2 - Keamanan Manajemen Sesi
 Tujuan: idle timeout, absolute timeout, cookie aman, anti session hijacking/duplication.
-Perubahan yang perlu dibuat:
-- Konfigurasi `config/session.php`: aktifkan `secure`, `http_only`, `same_site` Strict, `expire_on_close` dari env; tambah kunci custom `idle_timeout` & `absolute_timeout`.
-- Middleware: buat `app/Http/Middleware/EnforceSessionSecurity.php` untuk cek idle/absolute timeout, hapus sesi, redirect login.
-- Kernel: daftarkan middleware di web stack.
-- AuthController: regenerasi session ID setelah login sukses; logout harus `invalidate` + `regenerateToken`.
-Catatan env: set `SESSION_SECURE_COOKIE=true`; pastikan APP_URL https.
+Perubahan yang sudah dibuat:
+- `config/session.php`: secure cookie via env, http_only true, SameSite Strict, encrypt true, expire_on_close via env, kunci `idle_timeout` & `absolute_timeout`.
+- Middleware: `app/Http/Middleware/EnforceSessionSecurity.php` (cek idle/absolute, logout+invalidate).
+- Kernel: alias `session.security` ditambahkan; applied di group web auth.
+- `routes/web.php`: group auth memakai `session.security`.
+- `AuthController@login`: regen session, set `first_login`/`last_activity`; `logout` invalidate + regenerate token.
+Catatan env: set `SESSION_SECURE_COOKIE=true`, `SESSION_IDLE_TIMEOUT`, `SESSION_ABSOLUTE_TIMEOUT`; pastikan APP_URL https.
 
 Tahap 3 - Validasi Input & File Security (upload)
 Tujuan: validasi MIME riil, signature, whitelist path, karantina.
-Perubahan yang perlu dibuat:
-- Config `config/upload.php`: definisikan base dir upload, whitelist ekstensi (pdf, doc, docx, jpg, png), limit ukuran/jumlah file.
-- Helper `app/Helpers/Uploader.php` (atau service upload yang ada): cek MIME asli via finfo, cek signature bytes, tolak mismatch, batasi jumlah file, gunakan folder `uploads/temp` sebagai karantina sebelum pindah ke lokasi final.
-- Pastikan controller upload memakai helper ini, bukan move langsung.
-Catatan: rekomendasi tambah antivirus scan di `uploads/temp` sebelum publish (lihat Outstanding).
+Perubahan yang sudah dibuat:
+- `config/upload.php`: whitelist diperketat (pdf, doc, docx, jpg, png; gambar hanya jpg/png/jpeg; summernote jpg/png/jpeg).
+- `app/Helpers/Uploader.php`: cek MIME riil (finfo), signature (magic bytes), validasi ekstensi whitelist per field, limit jumlah file, tolak file yang tidak lolos; daftar error dikembalikan.
+- `app/Http/Controllers/FileUploaderController.php`: menolak upload (HTTP 400) jika ada error keamanan dari Uploader.
+Catatan: folder `uploads/temp` tetap karantina; disarankan AV scan sebelum pindah ke lokasi final (Outstanding).
 
 Tahap 4 - Kontrol Akses & Auditing
 Tujuan: RBAC diterapkan ke seluruh route sensitif dan audit perubahan akun.

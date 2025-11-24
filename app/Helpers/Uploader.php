@@ -34,7 +34,32 @@ class Uploader
 	 * separated by comma
      * @var string
      */
-	private $allowedExtensions = "jpg,png,jpeg,gif,pdf,txt,csv,xlsx";
+	private $allowedExtensions = "jpg,png,jpeg,gif,pdf,txt,csv,xlsx,doc,docx";
+	private $allowedExtensionsList = [];
+	private $allowedMimeMap = [
+		'jpg' => ['image/jpeg'],
+		'jpeg' => ['image/jpeg'],
+		'png' => ['image/png'],
+		'gif' => ['image/gif'],
+		'pdf' => ['application/pdf'],
+		'doc' => ['application/msword', 'application/x-msword'],
+		'docx' => ['application/vnd.openxmlformats-officedocument.wordprocessingml.document', 'application/zip'],
+		'csv' => ['text/plain', 'text/csv', 'application/csv'],
+		'json' => ['application/json', 'text/plain'],
+		'xlsx' => ['application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', 'application/zip'],
+		'txt' => ['text/plain'],
+	];
+	private $signatureMap = [
+		'pdf' => '25504446',
+		'png' => '89504E470D0A1A0A',
+		'jpg' => 'FFD8FF',
+		'jpeg' => 'FFD8FF',
+		'gif' => '47494638',
+		'doc' => 'D0CF11E0',
+		'docx' => '504B0304',
+		'xlsx' => '504B0304',
+		'zip' => '504B0304',
+	];
 
 	/**
      * current upload file name
@@ -126,6 +151,7 @@ class Uploader
 		$this->tempDir = config("upload.tempDir");
 
 		$this->allowedExtensions = $settings["extensions"];
+		$this->allowedExtensionsList = array_filter(array_map('strtolower', array_map('trim', explode(',', $this->allowedExtensions))));
 		$this->maxFileSize = intval($settings["max_file_size"]) * 1024; //in kilobyte
 		$this->returnFullPath = $settings["return_full_path"];
 		$this->filenamePrefix = $settings["filename_prefix"];
@@ -171,6 +197,12 @@ class Uploader
 		if (count($files) > $this->fileLimit) {
 			$errors[] = "Maximum number of files ({$this->fileLimit}) exceeded";
 		}
+		foreach ($files as $file) {
+			$securityErrors = $this->checkFileSecurity($file);
+			if (!empty($securityErrors)) {
+				$errors = array_merge($errors, $securityErrors);
+			}
+		}
 		return $errors;
 	}
 
@@ -196,6 +228,11 @@ class Uploader
 			$i++;
 			$this->file = $file;
 			$this->fileIndex = $i;
+			$securityErrors = $this->checkFileSecurity($file);
+			if (!empty($securityErrors)) {
+				$this->errors = array_merge($this->errors, $securityErrors);
+				continue;
+			}
 
 			$uploadedFile = $this->saveFile();
 			$this->uploadedFiles[] = $uploadedFile;
@@ -400,5 +437,55 @@ class Uploader
 			$filecount = count($files);
 		}
 		return $filecount;
+	}
+
+	/**
+	 * Additional security checks: extension whitelist, real MIME, and magic signature
+	 */
+	private function checkFileSecurity($file): array
+	{
+		$errors = [];
+		$extension = strtolower($file->getClientOriginalExtension());
+		if (!empty($this->allowedExtensionsList) && !in_array($extension, $this->allowedExtensionsList)) {
+			$errors[] = "Extension $extension tidak diizinkan.";
+			return $errors;
+		}
+
+		$realMime = $this->getRealMime($file);
+		$allowedMimes = $this->allowedMimeMap[$extension] ?? [];
+		if (!empty($allowedMimes) && !in_array($realMime, $allowedMimes)) {
+			$errors[] = "MIME tidak sesuai untuk $extension.";
+		}
+
+		$signatureValid = $this->isValidSignature($file, $extension);
+		if (!$signatureValid) {
+			$errors[] = "Signature file tidak dikenali atau tidak sesuai ($extension).";
+		}
+		return $errors;
+	}
+
+	private function getRealMime($file): string
+	{
+		$path = $file->getRealPath();
+		if (!$path) {
+			return $file->getMimeType();
+		}
+		$finfo = new \finfo(FILEINFO_MIME_TYPE);
+		return $finfo->file($path);
+	}
+
+	private function isValidSignature($file, string $extension): bool
+	{
+		if (!array_key_exists($extension, $this->signatureMap)) {
+			// no signature check needed for this extension
+			return true;
+		}
+		$path = $file->getRealPath();
+		if (!$path || !file_exists($path)) {
+			return false;
+		}
+		$bytes = bin2hex(@file_get_contents($path, false, null, 0, 8));
+		$expected = $this->signatureMap[$extension];
+		return str_starts_with(strtoupper($bytes), strtoupper($expected));
 	}
 }

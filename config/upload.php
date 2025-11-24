@@ -13,7 +13,7 @@
 		],
 		"summernote_images_upload" => [
 			"file_name_type" => "random",
-			"extensions" => "jpg,png,jpeg,gif",
+			"extensions" => "jpg,png,jpeg",
 			"limit" => "10",
 			"max_file_size" => "3",
 			"return_full_path" => false,
@@ -23,7 +23,7 @@
 		
 		"file" => [
 			"file_name_type" => "random",
-			"extensions" => "jpg,png,gif,jpeg",
+			"extensions" => "pdf,doc,docx,jpg,png",
 			"limit" => 1,
 			"max_file_size" => 3, //in mb
 			"return_full_path" => false,
@@ -39,7 +39,7 @@
 
 		"gambar" => [
 			"file_name_type" => "random",
-			"extensions" => "jpg,png,gif,jpeg",
+			"extensions" => "jpg,png,jpeg",
 			"limit" => 1,
 			"max_file_size" => 3, //in mb
 			"return_full_path" => false,
@@ -55,7 +55,7 @@
 
 		"photo" => [
 			"file_name_type" => "random",
-			"extensions" => "jpg,png,gif,jpeg",
+			"extensions" => "jpg,png,jpeg",
 			"limit" => 1,
 			"max_file_size" => 3, //in mb
 			"return_full_path" => false,
