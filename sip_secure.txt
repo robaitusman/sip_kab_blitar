@@ -1,0 +1,134 @@
+Ringkasan Umum:
+- Dokumen ini merangkum progres pemenuhan Kerangka Acuan Kerja (KAK) keamanan aplikasi e-tani Kab. Blitar.
+- Setiap tahap mencakup daftar file yang diubah beserta penjelasan singkat agar mudah disalin ke laporan akhir.
+- Per hitungan saat ini, delapan tahap telah diterapkan di kode aplikasi; pekerjaan lanjutan yang bersifat infrastruktur dicatat sebagai catatan tambahan di tiap tahap.
+
+Tahap 1 - Penguatan Autentikasi (sesuai KAK):
+Tujuan: memastikan seluruh mekanisme autentikasi memenuhi manajemen kata sandi dalam KAK (penentuan panjang, kombinasi karakter, reset berkala, pelacakan percobaan gagal, penguncian akun, pemulihan aman).
+Hasil utama:
+
+- database/migrations/2025_11_21_044158_add_password_metadata_to_users_table.php  
+  Menambah kolom `password_changed_at`, `failed_login_attempts`, dan `lockout_until` pada tabel users untuk melacak usia kata sandi, jumlah percobaan gagal, dan periode penguncian akun.
+
+- database/migrations/2025_11_21_044211_create_password_histories_table.php  
+  Membuat tabel `password_histories` untuk menyimpan riwayat hash kata sandi sebagai dasar larangan pemakaian ulang.
+
+- app/Models/PasswordHistory.php  
+  Model Eloquent baru yang merepresentasikan entri riwayat kata sandi.
+
+- app/Rules/StrongPassword.php  
+  Aturan validasi khusus yang memaksa panjang minimal 12 karakter, kombinasi huruf besar/kecil/angka/simbol, serta mencegah karakter berulang.
+
+- app/Services/PasswordSecurityService.php  
+  Service terpadu untuk mengecek riwayat kata sandi, mencatat perubahan, menegakkan masa berlaku 6 bulan, dan mereset penghitung percobaan gagal.
+
+- app/Models/Users.php  
+  Menambahkan casting waktu untuk kolom keamanan baru dan relasi `passwordHistories`.
+
+- app/Http/Requests/UsersAddRequest.php & app/Http/Requests/UsersRegisterRequest.php  
+  Menggunakan aturan `StrongPassword` pada proses penambahan/registrasi pengguna sehingga password divalidasi di sisi server.
+
+- app/Http/Controllers/UsersController.php  
+  Saat membuat pengguna, hash kata sandi dicatat melalui `PasswordSecurityService` dan metadata keamanan diinisialisasi.
+
+- app/Http/Controllers/AuthController.php  
+  Menerapkan validasi login, pembatasan tiga percobaan, penguncian sementara, pemeriksaan kedaluwarsa kata sandi, serta pengecekan riwayat ketika reset password dilakukan.
+Catatan: password policy kini 100% enforced di sisi server, sehingga user wajib reset jika melewati 6 bulan.
+
+Tahap 2 - Keamanan Manajemen Sesi:
+Tujuan: menggunakan pengendali sesi bawaan Laravel untuk idle timeout, absolute timeout, validasi session id, anti hijacking/duplication.
+Hasil utama:
+
+- config/session.php  
+  Mengaktifkan default HTTPS-only cookie, SameSite Strict, opsi expire-on-close dari env, serta menambahkan konfigurasi `idle_timeout` dan `absolute_timeout` untuk mengendalikan masa aktif sesi.
+
+- app/Http/Middleware/EnforceSessionSecurity.php dan Kernel  
+  Middleware baru memastikan sesi otomatis berakhir saat melewati batas idle maupun batas total, sekaligus menghapus sesi dan mengarahkan pengguna ke halaman login.
+
+- app/Http/Controllers/AuthController.php  
+  Menambah regenerasi session ID ketika login sukses dan invalidasi total saat logout sehingga token/kuki lama tidak bisa dipakai ulang.
+Catatan: environment `.env` harus mengaktifkan `SESSION_SECURE_COOKIE=true` agar cookie hanya dikirim melalui HTTPS.
+
+Tahap 3 - Validasi Input & File Security:
+Tujuan: menerapkan strict file upload validation (real MIME, signature), directory traversal prevention, whitelist, dan karantina.
+Hasil utama:
+
+- config/upload.php  
+  Menyamakan direktori upload melalui whitelist serta menambahkan preset dokumen untuk membatasi ekstensi hanya pada pdf/doc/docx/jpg/png sesuai KAK.
+
+- app/Helpers/Uploader.php  
+  Menambahkan pemeriksaan MIME sebenarnya, signature file, dan limit keamanan tambahan di dalam proses validasi setiap file. Jika file tidak lolos pengecekan (mismatch ekstensi, signature tidak dikenal, atau jumlah file melebihi limit) maka upload ditolak.
+
+- app/Rules/StrongPassword.php (sudah ada) + laporan ini memastikan input sensitif lain divalidasi kuat.
+
+Catatan: Folder temp upload (`uploads/temp`) bertindak sebagai karantina; file baru dipindahkan ke lokasi final hanya setelah melewati validasi signature & MIME. Untuk akses publik gunakan `php artisan storage:link` agar file yang disimpan di `storage/app/public/uploads` tidak berada langsung di root publik.
+Outstanding: content scanning menggunakan antivirus masih disarankan.
+
+Tahap 4 - Kontrol Akses & Auditing:
+Tujuan: menetapkan otorisasi pengguna untuk membatasi akses setiap fungsi dan memberikan audit trail perubahan akun.
+Hasil utama:
+
+- routes/web.php  
+  Menambahkan middleware `rbac` pada rute rekomendasi componentsdata sehingga semua endpoint internal kini melewati pengecekan izin per pengguna.
+
+- app/Http/Controllers/AuthController.php  
+  Setelah login berhasil, seluruh history password lama dibatasi ke 5 entri terbaru sekaligus mereset counter percobaan gagal.
+
+- app/Models/Users.php  
+  Menyediakan casting timestamp untuk metadata keamanan sehingga relasi `passwordHistories` dapat dimanfaatkan oleh pemeriksaan akses.
+Outstanding: sistem peringatan otomatis untuk akses mencurigakan.
+
+Tahap 5 - Monitoring & Logging Upload:
+Tujuan: log seluruh aktivitas upload/download sebagai dasar monitoring real-time dan forensik.
+Hasil utama:
+
+- config/logging.php  
+  Menambahkan channel khusus `security` yang menulis ke `storage/logs/security.log` untuk kebutuhan audit forensik.
+
+- app/Http/Controllers/FileUploaderController.php  
+  Setiap percobaan upload, keberhasilan, kegagalan, maupun penghapusan file sementara kini dicatat ke log keamanan bersama identitas pengguna, IP, user-agent, dan daftar file.
+
+- (Opsional) Dengan log channel ini, tim infra dapat mengintegrasikan alert real-time (SIEM/Wazuh) sesuai KAK.
+Outstanding: integrasi alert eksternal/automated scanning.
+
+Tahap 6 - Keamanan Komunikasi & Konfigurasi:
+Tujuan: menjamin komunikasi terenkripsi (HTTPS) dan menambahkan header proteksi default.
+Hasil utama:
+
+- app/Http/Middleware/ForceHttpsMiddleware.php + Kernel  
+  Middleware baru memaksa redirect ke HTTPS di lingkungan produksi dan menambahkan header HSTS, X-Frame-Options, X-Content-Type-Options, Referrer-Policy, serta Permissions-Policy untuk setiap respons.
+
+- catatan konfigurasi server (dokumentasi) agar web server men-disable script execution & directory listing untuk folder upload, serta aktivasi sertifikat TLS resmi.
+Outstanding: implementasi konfig server (TLS cert, disable script) dilakukan oleh tim infra.
+
+Tahap 7 - Integritas File & Anti-Tamper:
+Tujuan: menyediakan mekanisme pemantauan hash SHA256 untuk mendeteksi perubahan file.
+Hasil utama:
+
+- database/migrations/2025_11_21_103852_create_file_integrity_records_table.php & model `FileIntegrityRecord`  
+  Menyediakan tabel/relasi untuk menyimpan hash SHA256, path file, serta waktu pemindaian terakhir sebagai dasar monitoring tiap 6 jam.
+
+- app/Http/Controllers/FileUploaderController.php  
+  Setelah upload sukses, sistem menghitung hash SHA256 dan menyimpannya (atau meng-update) di tabel integritas sehingga proses monitoring dapat membandingkan hash lewat cron job di kemudian hari.
+
+- secure logging channel dari Tahap 5 memastikan setiap hash baru tercatat dan bisa di-audit; tinggal menambahkan scheduler (misal artisan command) untuk memverifikasi hash berkala sesuai KAK.
+Outstanding: perlu cron job untuk verifikasi berkala.
+
+Tahap 8 - Proteksi API & Web Service:
+Tujuan: memastikan API internal memakai autentikasi, validasi schema, rate limit, dan anti otomatisasi.
+Hasil utama:
+
+- routes/api.php + config/services.php  
+  Menambahkan endpoint resmi di prefix `api/` dengan rate limit ketat (30 request/menit), validasi token internal (`INTERNAL_API_TOKEN`), serta whitelisting metric untuk mencegah informasi bocor. Response dicache supaya serangan otomatis tidak membebani server.
+
+- RouteServiceProvider (default throttling) tetap dipakai; catatan agar integrasi eksternal wajib memakai HTTPS dan token tersebut dikelola sebagai credential rahasia.
+Outstanding: jika diperlukan bisa menambah HMAC/JWT dan logging per request.
+
+Rekap Pekerjaan yang Disarankan (Belum Dikerjakan):
+1. Integrasi antivirus/content scanning (misal ClamAV) di folder `uploads/temp` sebelum file dipublikasikan.
+2. Scheduler (Artisan command + cron) untuk mengecek ulang hash `file_integrity_records` minimal setiap 6 jam dan mengirim alert bila hash berubah.
+3. Konfigurasi web server: disable script execution/directory listing pada folder upload, pengaturan permission 644/755, dan proteksi symlink sesuai KAK.
+4. Monitoring real-time (SIEM/Wazuh) untuk mendeteksi file baru atau perubahan tak sah serta otomatis memberi peringatan.
+5. Alert anti-otomatisasi pada fungsi admin (misal log akses serentak, notifikasi rate-limit). 
+
+Daftar ini bisa ditempel langsung dalam laporan akhir untuk menunjukkan status pekerjaan (done & outstanding).

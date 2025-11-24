@@ -1,0 +1,75 @@
+Laporan Rencana Penerapan Keamanan SIP (berdasarkan template e-tani)
+
+Format: tiap tahap memuat tujuan, daftar perubahan yang perlu dibuat di kode SIP, serta catatan eksekusi/infra. Ikuti urutan Tahap 1–8. Pastikan commit/rollback per tahap agar mudah diaudit.
+
+Tahap 1 - Penguatan Autentikasi (password policy & lockout)
+Tujuan: memenuhi kebijakan panjang/kompleksitas, pelacakan percobaan gagal, penguncian akun, masa berlaku 6 bulan, dan riwayat password.
+Perubahan yang perlu dibuat:
+- Migrasi: tambahkan kolom `password_changed_at`, `failed_login_attempts`, `lockout_until` di tabel users. Buat tabel `password_histories` (user_id, password_hash, created_at).
+- Model: buat `app/Models/PasswordHistory.php`; di model User tambahkan casts datetime untuk kolom baru dan relasi `passwordHistories()`.
+- Rule: buat `app/Rules/StrongPassword.php` (min 12, upper/lower/number/symbol, larang karakter berulang).
+- Service: buat `app/Services/PasswordSecurityService.php` untuk cek riwayat, enforce usia 6 bulan, simpan histori, reset counter gagal.
+- Request: pakai StrongPassword di form registrasi/penambahan user (misal `UsersRegisterRequest`, `UsersAddRequest`).
+- Controller: di `AuthController` terapkan limit 3 gagal → set lockout, cek expiry password 6 bulan, regenerasi hash historis saat reset; di `UsersController` catat histori password saat create/update.
+Catatan: reset paksa jika password kedaluwarsa; buat seeder admin dengan password patuh aturan.
+
+Tahap 2 - Keamanan Manajemen Sesi
+Tujuan: idle timeout, absolute timeout, cookie aman, anti session hijacking/duplication.
+Perubahan yang perlu dibuat:
+- Konfigurasi `config/session.php`: aktifkan `secure`, `http_only`, `same_site` Strict, `expire_on_close` dari env; tambah kunci custom `idle_timeout` & `absolute_timeout`.
+- Middleware: buat `app/Http/Middleware/EnforceSessionSecurity.php` untuk cek idle/absolute timeout, hapus sesi, redirect login.
+- Kernel: daftarkan middleware di web stack.
+- AuthController: regenerasi session ID setelah login sukses; logout harus `invalidate` + `regenerateToken`.
+Catatan env: set `SESSION_SECURE_COOKIE=true`; pastikan APP_URL https.
+
+Tahap 3 - Validasi Input & File Security (upload)
+Tujuan: validasi MIME riil, signature, whitelist path, karantina.
+Perubahan yang perlu dibuat:
+- Config `config/upload.php`: definisikan base dir upload, whitelist ekstensi (pdf, doc, docx, jpg, png), limit ukuran/jumlah file.
+- Helper `app/Helpers/Uploader.php` (atau service upload yang ada): cek MIME asli via finfo, cek signature bytes, tolak mismatch, batasi jumlah file, gunakan folder `uploads/temp` sebagai karantina sebelum pindah ke lokasi final.
+- Pastikan controller upload memakai helper ini, bukan move langsung.
+Catatan: rekomendasi tambah antivirus scan di `uploads/temp` sebelum publish (lihat Outstanding).
+
+Tahap 4 - Kontrol Akses & Auditing
+Tujuan: RBAC diterapkan ke seluruh route sensitif dan audit perubahan akun.
+Perubahan yang perlu dibuat:
+- Routes `routes/web.php`: pastikan semua endpoint internal (misal rekomendasi/componentsdata) dilindungi middleware RBAC/role.
+- AuthController: setelah login, batasi riwayat password ke 5 entri terbaru dan reset counter gagal.
+- Model User: pastikan casting timestamp baru berfungsi untuk evaluasi akses.
+Catatan: siapkan alert untuk akses mencurigakan (belum dikerjakan).
+
+Tahap 5 - Monitoring & Logging Upload
+Tujuan: audit trail upload/download untuk forensik.
+Perubahan yang perlu dibuat:
+- `config/logging.php`: tambah channel `security` → file `storage/logs/security.log`.
+- `app/Http/Controllers/FileUploaderController.php`: log setiap upload/delete (sukses/gagal) beserta user, IP, user-agent, nama file, alasan gagal ke channel `security`.
+Catatan: bisa diintegrasikan ke SIEM/Wazuh jika tersedia.
+
+Tahap 6 - Keamanan Komunikasi & Header
+Tujuan: enforce HTTPS dan header proteksi.
+Perubahan yang perlu dibuat:
+- Middleware `ForceHttpsMiddleware`: redirect ke HTTPS di production dan tambahkan header HSTS, X-Frame-Options DENY, X-Content-Type-Options nosniff, Referrer-Policy strict-origin-when-cross-origin, Permissions-Policy minimal.
+- Kernel: daftarkan middleware untuk semua web responses.
+Catatan infra: aktifkan TLS valid di server; disable script execution & directory listing di folder upload.
+
+Tahap 7 - Integritas File & Anti-Tamper
+Tujuan: deteksi perubahan file pasca upload.
+Perubahan yang perlu dibuat:
+- Migrasi: tabel `file_integrity_records` (path, sha256_hash, last_scanned_at, timestamps).
+- Model `FileIntegrityRecord`.
+- FileUploaderController: setelah upload sukses, hitung hash SHA256 dan simpan/update record.
+Catatan: butuh scheduler artisan + cron untuk verifikasi berkala (Outstanding).
+
+Tahap 8 - Proteksi API & Web Service
+Tujuan: API internal dengan token, rate limit, schema validation, anti otomatisasi.
+Perubahan yang perlu dibuat:
+- `routes/api.php`: endpoint resmi dengan middleware rate limit ketat (misal 30/menit) dan validasi token env `INTERNAL_API_TOKEN`.
+- `config/services.php`: simpan token internal; gunakan cache response untuk metrik.
+Catatan: bisa tambah HMAC/JWT + logging per request jika diperlukan.
+
+Outstanding (belum dikerjakan, disarankan):
+1) Integrasi antivirus/content scanning di `uploads/temp` sebelum file dipindah.
+2) Scheduler (Artisan command + cron 6 jam) untuk re-scan hash `file_integrity_records` dan kirim alert bila berubah.
+3) Konfigurasi server: nonaktifkan script execution & directory listing pada folder upload, set permission 644/755, proteksi symlink.
+4) Integrasi SIEM/Wazuh untuk alert real-time atas file baru/perubahan tak sah.
+5) Alert anti-otomatisasi di fungsi admin (deteksi akses serentak, rate-limit hit, notifikasi).
